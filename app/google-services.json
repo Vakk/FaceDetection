@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "347835798061",
+    "firebase_url": "https://coursework-bfd1d.firebaseio.com",
+    "project_id": "coursework-bfd1d",
+    "storage_bucket": "coursework-bfd1d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:347835798061:android:c6e4f12c02f06d01",
+        "android_client_info": {
+          "package_name": "com.valery.coursework"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "347835798061-nfu8j69qmt9g1qod1qlv4som8054jf7g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.valery.coursework",
+            "certificate_hash": "d0b30460f844a3d8d6dcb8fd1244fcf597572cb1"
+          }
+        },
+        {
+          "client_id": "347835798061-svd6eo15eku3mcser77koi33mhp85ttj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAuEjMn_G8nLfBOt8Qb6OYL0wqmn1aEdhA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "347835798061-svd6eo15eku3mcser77koi33mhp85ttj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
