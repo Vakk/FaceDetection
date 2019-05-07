@@ -16,7 +16,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.provider.MediaStore
-import android.view.Surface
 import android.view.View
 import androidx.core.graphics.applyCanvas
 import com.google.firebase.ml.vision.FirebaseVision
@@ -77,6 +76,10 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
 
     var sessionCallback: CameraCaptureSession.StateCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigured(session: CameraCaptureSession) {
+            val cameraDevice = cameraDevice ?: return
+            val requestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
+            requestBuilder.addTarget(svCamera.holder.surface)
+            session.setRepeatingRequest(requestBuilder.build(), null, null)
             showMessage("capture session configured: $session")
         }
 
@@ -155,17 +158,17 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
         val cameraManager = cameraManager ?: return
         val cameraIdList = cameraManager.cameraIdList
         try {
-            cameraManager.openCamera(cameraIdList.first(), cameraStateCallback, Handler())
+            cameraManager.openCamera(cameraIdList[1], cameraStateCallback, Handler())
         } catch (e: SecurityException) {
             showMessage("Camera's permissions not allowed.")
         }
     }
 
     private fun configureCamera() {
-        svCamera.holder.setFixedSize(200, 200)
-        val surface: Surface = svCamera.holder.surface
+        val cameraDevice = cameraDevice ?: return
+        val surface = svCamera.holder.surface
         try {
-            cameraDevice?.createCaptureSession(listOf(surface), sessionCallback, null)
+            cameraDevice.createCaptureSession(listOf(surface), sessionCallback, Handler())
         } catch (e: CameraAccessException) {
             showMessage(e.toString())
         }
