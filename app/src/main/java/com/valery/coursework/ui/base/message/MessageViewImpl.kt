@@ -23,7 +23,7 @@ class MessageViewImpl(context: Context) : MessageView {
     }
 
     override fun showSnackbar(message: String, view: View, length: Int) {
-        Snackbar.make(view, message, length)
+        Snackbar.make(view, message, length).show()
     }
 
     override fun showSnackbar(id: Int, view: View, length: Int) {

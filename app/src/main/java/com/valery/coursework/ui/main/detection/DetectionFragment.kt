@@ -16,6 +16,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.provider.MediaStore
+import android.util.Log
+import android.view.SurfaceHolder
 import android.view.View
 import androidx.core.graphics.applyCanvas
 import com.google.firebase.ml.vision.FirebaseVision
@@ -29,7 +31,8 @@ import com.valery.coursework.utils.showMessage
 import kotlinx.android.synthetic.main.fragment_detection.*
 
 
-class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::class.java), View.OnClickListener {
+class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::class.java), View.OnClickListener,
+    SurfaceHolder.Callback {
 
     override val layoutId: Int = R.layout.fragment_detection
 
@@ -92,6 +95,12 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
         super.onViewCreated(view, savedInstanceState)
         btnChooseImage.setOnClickListener(this)
         runCamera()
+        svCamera.holder.addCallback(this)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        svCamera.holder.removeCallback(this)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -129,6 +138,18 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
         when (v?.id) {
             R.id.btnChooseImage -> pickImage()
         }
+    }
+
+    override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
+        Log.d("TAg", "surfaceChanged")
+    }
+
+    override fun surfaceDestroyed(holder: SurfaceHolder?) {
+        Log.d("TAg", "surfaceDestroyed")
+    }
+
+    override fun surfaceCreated(holder: SurfaceHolder?) {
+        Log.d("TAg", "surfaceCreated")
     }
 
     private fun pickImage() {
