@@ -20,13 +20,13 @@ import com.valery.coursework.R
 import com.valery.coursework.ui.base.BaseFragment
 import com.valery.coursework.utils.RequestCode
 import com.valery.coursework.utils.showMessage
-import kotlinx.android.synthetic.main.fragment_detection.*
+import kotlinx.android.synthetic.main.fragment_image_detection.*
 
 
 class ImageDetectionFragment : BaseFragment<ImageDetectionViewModel>(ImageDetectionViewModel::class.java),
     View.OnClickListener {
 
-    override val layoutId: Int = R.layout.fragment_detection
+    override val layoutId: Int = R.layout.fragment_image_detection
 
     val highAccuracyOpts = FirebaseVisionFaceDetectorOptions.Builder()
         .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ACCURATE)
