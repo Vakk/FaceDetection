@@ -1,4 +1,4 @@
-package com.valery.coursework.ui.main.detection
+package com.valery.coursework.ui.main.detection.camera
 
 import android.Manifest
 import android.content.Context
@@ -7,16 +7,13 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
-import android.hardware.camera2.CameraAccessException
-import android.hardware.camera2.CameraCaptureSession
-import android.hardware.camera2.CameraDevice
-import android.hardware.camera2.CameraManager
+import android.hardware.camera2.*
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.provider.MediaStore
-import android.util.Log
+import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.View
 import androidx.core.graphics.applyCanvas
@@ -28,13 +25,13 @@ import com.valery.coursework.R
 import com.valery.coursework.ui.base.BaseFragment
 import com.valery.coursework.utils.RequestCode
 import com.valery.coursework.utils.showMessage
-import kotlinx.android.synthetic.main.fragment_detection.*
+import kotlinx.android.synthetic.main.fragment_camera_detection.*
 
+class CameraDetectionFragment :
+    BaseFragment<CameraDetectionViewModel>(CameraDetectionViewModel::class.java),
+    View.OnClickListener, SurfaceHolder.Callback {
 
-class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::class.java), View.OnClickListener,
-    SurfaceHolder.Callback {
-
-    override val layoutId: Int = R.layout.fragment_detection
+    override val layoutId: Int = R.layout.fragment_camera_detection
 
     private val realTimeOpts by lazy {
         FirebaseVisionFaceDetectorOptions.Builder()
@@ -44,22 +41,67 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
             .build()
     }
 
-    private val staticOpts by lazy {
-        FirebaseVisionFaceDetectorOptions.Builder()
-            .setContourMode(FirebaseVisionFaceDetectorOptions.ALL_CONTOURS)
-            .build()
-    }
-
-    private val imageDetector by lazy {
+    private val cameraDetector by lazy {
         FirebaseVision.getInstance().getVisionFaceDetector(realTimeOpts)
-    }
-
-    private val staticDetector by lazy {
-        FirebaseVision.getInstance().getVisionFaceDetector(staticOpts)
     }
 
     private var cameraManager: CameraManager? = null
     private var cameraDevice: CameraDevice? = null
+
+    private var cameraCaptureSessionCallback = object : CameraCaptureSession.CaptureCallback() {
+        override fun onCaptureBufferLost(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            target: Surface,
+            frameNumber: Long
+        ) {
+            super.onCaptureBufferLost(session, request, target, frameNumber)
+            showMessage("onCaptureBufferLost")
+        }
+
+        override fun onCaptureCompleted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            result: TotalCaptureResult
+        ) {
+            super.onCaptureCompleted(session, request, result)
+            showMessage("onCaptureCompleted")
+        }
+
+        override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
+            super.onCaptureFailed(session, request, failure)
+            showMessage("onCaptureFailed")
+        }
+
+        override fun onCaptureProgressed(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            partialResult: CaptureResult
+        ) {
+            super.onCaptureProgressed(session, request, partialResult)
+            showMessage("onCaptureProgressed")
+        }
+
+        override fun onCaptureSequenceAborted(session: CameraCaptureSession, sequenceId: Int) {
+            super.onCaptureSequenceAborted(session, sequenceId)
+            showMessage("onCaptureSequenceAborted")
+        }
+
+        override fun onCaptureSequenceCompleted(session: CameraCaptureSession, sequenceId: Int, frameNumber: Long) {
+            super.onCaptureSequenceCompleted(session, sequenceId, frameNumber)
+            showMessage("onCaptureSequenceAborted")
+        }
+
+        override fun onCaptureStarted(
+            session: CameraCaptureSession,
+            request: CaptureRequest,
+            timestamp: Long,
+            frameNumber: Long
+        ) {
+            super.onCaptureStarted(session, request, timestamp, frameNumber)
+            showMessage("onCaptureStarted")
+        }
+    }
 
     private var cameraStateCallback = object : CameraDevice.StateCallback() {
         override fun onDisconnected(camera: CameraDevice) {
@@ -77,12 +119,14 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
         }
     }
 
-    var sessionCallback: CameraCaptureSession.StateCallback = object : CameraCaptureSession.StateCallback() {
+    private var sessionCallback: CameraCaptureSession.StateCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigured(session: CameraCaptureSession) {
             val cameraDevice = cameraDevice ?: return
+            val surface = svCamera.holder.surface
             val requestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
-            requestBuilder.addTarget(svCamera.holder.surface)
-            session.setRepeatingRequest(requestBuilder.build(), null, null)
+            requestBuilder.addTarget(surface)
+            val request = requestBuilder.build()
+            session.setRepeatingRequest(request, cameraCaptureSessionCallback, null)
             showMessage("capture session configured: $session")
         }
 
@@ -93,7 +137,6 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        btnChooseImage.setOnClickListener(this)
         runCamera()
         svCamera.holder.addCallback(this)
     }
@@ -105,14 +148,6 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         when (RequestCode.toRequestCode(requestCode)) {
-            RequestCode.PICK_IMAGE -> {
-                val allPermissionsGranted = grantResults.firstOrNull { it == PackageManager.PERMISSION_DENIED } == null
-                if (allPermissionsGranted) {
-                    pickImageForce()
-                } else {
-                    showMessage("You should allow permissions.")
-                }
-            }
             RequestCode.RUN_CAMERA -> {
                 val allPermissionsGranted = grantResults.firstOrNull { it == PackageManager.PERMISSION_DENIED } == null
                 if (allPermissionsGranted) {
@@ -135,35 +170,16 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
     }
 
     override fun onClick(v: View?) {
-        when (v?.id) {
-            R.id.btnChooseImage -> pickImage()
-        }
+
     }
 
     override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
-        Log.d("TAg", "surfaceChanged")
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder?) {
-        Log.d("TAg", "surfaceDestroyed")
     }
 
     override fun surfaceCreated(holder: SurfaceHolder?) {
-        Log.d("TAg", "surfaceCreated")
-    }
-
-    private fun pickImage() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), RequestCode.PICK_IMAGE.code)
-        } else {
-            pickImageForce()
-        }
-    }
-
-    private fun pickImageForce() {
-        val intent = Intent(Intent.ACTION_PICK)
-        intent.type = "image/*"
-        startActivityForResult(intent, RequestCode.PICK_IMAGE.code)
     }
 
     private fun runCamera() {
@@ -197,9 +213,10 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
 
     private fun detectStaticImage(uri: Uri) {
         val bitmap = MediaStore.Images.Media.getBitmap(context?.contentResolver, uri)
-        staticDetector.detectInImage(FirebaseVisionImage.fromBitmap(bitmap))?.addOnSuccessListener {
-            processFaces(bitmap.copy(Bitmap.Config.ARGB_8888, true), it)
-        }
+        cameraDetector
+            .detectInImage(FirebaseVisionImage.fromBitmap(bitmap))?.addOnSuccessListener {
+                processFaces(bitmap.copy(Bitmap.Config.ARGB_8888, true), it)
+            }
     }
 
     private fun processFaces(mutableBitmap: Bitmap, faces: List<FirebaseVisionFace>) {
@@ -214,12 +231,12 @@ class DetectionFragment : BaseFragment<DetectionViewModel>(DetectionViewModel::c
                 }
             }
         }
-        ivImage.setImageBitmap(mutableBitmap)
+        TODO("Add some show to UI")
     }
 
 
     companion object {
-        fun newInstance(): DetectionFragment = DetectionFragment()
+        fun newInstance(): CameraDetectionFragment = CameraDetectionFragment()
 
         /*
     fun initML() {

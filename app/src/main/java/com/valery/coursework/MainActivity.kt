@@ -2,7 +2,7 @@ package com.valery.coursework
 
 import android.os.Bundle
 import com.valery.coursework.ui.base.BaseFragmentActivity
-import com.valery.coursework.ui.main.detection.DetectionFragment
+import com.valery.coursework.ui.main.detection.image.ImageDetectionFragment
 
 
 class MainActivity : BaseFragmentActivity() {
@@ -13,6 +13,6 @@ class MainActivity : BaseFragmentActivity() {
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
         super.onPostCreate(savedInstanceState)
-        replaceFragment(DetectionFragment.newInstance())
+        replaceFragment(ImageDetectionFragment.newInstance())
     }
 }
