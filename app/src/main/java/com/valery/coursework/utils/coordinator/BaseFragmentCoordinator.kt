@@ -5,7 +5,11 @@ import androidx.fragment.app.FragmentManager
 import com.valery.coursework.utils.navigation.FragmentNavigationHelper
 import com.valery.coursework.utils.navigation.FragmentNavigationHelperImpl
 
-abstract class BaseFragmentCoordinator(var containerId: Int, fragmentManager: FragmentManager) : Coordinator {
+abstract class BaseFragmentCoordinator : Coordinator {
+
+    var containerId: Int = 0
+
+    lateinit var fragmentManager: FragmentManager
 
     protected val navigationHelper: FragmentNavigationHelper by lazy {
         FragmentNavigationHelperImpl(containerId, fragmentManager)
