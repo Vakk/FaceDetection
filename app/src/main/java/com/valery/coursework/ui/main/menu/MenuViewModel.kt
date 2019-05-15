@@ -1,5 +1,5 @@
 package com.valery.coursework.ui.main.menu
 
-import com.valery.coursework.ui.base.BaseViewModel
+import com.valery.base.BaseViewModel
 
 class MenuViewModel : BaseViewModel()

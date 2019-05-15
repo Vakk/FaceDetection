@@ -1,5 +1,5 @@
 package com.valery.coursework.ui.main.detection.image
 
-import com.valery.coursework.ui.base.BaseViewModel
+import com.valery.base.BaseViewModel
 
 class ImageDetectionViewModel : BaseViewModel()

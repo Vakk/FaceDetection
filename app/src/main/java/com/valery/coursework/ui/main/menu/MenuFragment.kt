@@ -3,10 +3,10 @@ package com.valery.coursework.ui.main.menu
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import com.valery.base.BaseFragment
 import com.valery.coursework.R
-import com.valery.coursework.ui.base.BaseFragment
-import com.valery.coursework.utils.coordinator.main.MainCoordinator
-import com.valery.coursework.utils.extensions.cast
+import com.valery.coursework.ui.coordinator.main.MainCoordinator
+import com.valery.base.utils.extensions.cast
 import kotlinx.android.synthetic.main.fragment_menu.*
 
 class MenuFragment : BaseFragment<MenuViewModel>(MenuViewModel::class.java) {
