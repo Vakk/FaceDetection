@@ -1,5 +1,6 @@
 package com.valery.coursework.ui.base
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -7,7 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProviders
 import com.valery.coursework.ui.base.message.MessageView
-import com.valery.coursework.ui.base.message.MessageViewImpl
+import com.valery.coursework.utils.extensions.cast
 
 abstract class BaseFragment<T : BaseViewModel>(private val clazz: Class<T>) : Fragment(), MessageView {
     lateinit var viewModel: T
@@ -16,8 +17,16 @@ abstract class BaseFragment<T : BaseViewModel>(private val clazz: Class<T>) : Fr
 
     var rootView: View? = null
 
-    protected open val messageView: MessageView? by lazy {
-        context?.let { MessageViewImpl(it) }
+    protected open var messageView: MessageView? = null
+
+    override fun onAttach(context: Context?) {
+        super.onAttach(context)
+        messageView = context.cast()
+    }
+
+    override fun onDetach() {
+        messageView = null
+        super.onDetach()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
