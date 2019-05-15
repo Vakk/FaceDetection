@@ -1,4 +1,4 @@
-package com.valery.coursework.utils
+package com.valery.coursework.utils.extensions
 
 import com.google.android.material.snackbar.Snackbar
 import com.valery.coursework.ui.base.BaseFragment

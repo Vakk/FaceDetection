@@ -24,7 +24,7 @@ import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions
 import com.valery.coursework.R
 import com.valery.coursework.ui.base.BaseFragment
 import com.valery.coursework.utils.RequestCode
-import com.valery.coursework.utils.showMessage
+import com.valery.coursework.utils.extensions.showMessage
 import kotlinx.android.synthetic.main.fragment_camera_detection.*
 
 class CameraDetectionFragment :

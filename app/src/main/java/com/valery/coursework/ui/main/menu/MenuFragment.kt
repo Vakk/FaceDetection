@@ -6,7 +6,7 @@ import android.view.View
 import com.valery.coursework.R
 import com.valery.coursework.ui.base.BaseFragment
 import com.valery.coursework.utils.coordinator.main.MainCoordinator
-import kotlinx.android.synthetic.main.fragment_image_detection.*
+import com.valery.coursework.utils.extensions.cast
 import kotlinx.android.synthetic.main.fragment_menu.*
 
 class MenuFragment : BaseFragment<MenuViewModel>(MenuViewModel::class.java) {
@@ -17,7 +17,7 @@ class MenuFragment : BaseFragment<MenuViewModel>(MenuViewModel::class.java) {
 
     override fun onAttach(context: Context?) {
         super.onAttach(context)
-        mainCoordinator = context as MainCoordinator
+        mainCoordinator = context.cast()
     }
 
     override fun onDetach() {

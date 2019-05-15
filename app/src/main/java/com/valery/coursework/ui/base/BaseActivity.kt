@@ -8,9 +8,6 @@ import com.valery.coursework.ui.base.message.MessageViewImpl
 
 abstract class BaseActivity : AppCompatActivity(), MessageView {
 
-    open val rootView: View
-        get() = findViewById(android.R.id.content)
-
     abstract val layoutId: Int
 
     protected open val messageView: MessageView? by lazy {
