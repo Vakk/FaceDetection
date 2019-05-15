@@ -6,19 +6,24 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.ImageFormat
 import android.graphics.Paint
-import android.hardware.camera2.*
+import android.hardware.camera2.CameraAccessException
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraManager
+import android.media.ImageReader
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.provider.MediaStore
-import android.view.Surface
-import android.view.SurfaceHolder
 import android.view.View
 import androidx.core.graphics.applyCanvas
+import com.google.android.gms.tasks.Task
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
+import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import com.google.firebase.ml.vision.face.FirebaseVisionFace
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions
 import com.valery.base.BaseFragment
@@ -29,15 +34,14 @@ import kotlinx.android.synthetic.main.fragment_camera_detection.*
 
 class CameraDetectionFragment :
     BaseFragment<CameraDetectionViewModel>(CameraDetectionViewModel::class.java),
-    View.OnClickListener, SurfaceHolder.Callback {
+    View.OnClickListener,
+    ImageReader.OnImageAvailableListener {
 
     override val layoutId: Int = R.layout.fragment_camera_detection
 
     private val realTimeOpts by lazy {
         FirebaseVisionFaceDetectorOptions.Builder()
-            .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ACCURATE)
-            .setLandmarkMode(FirebaseVisionFaceDetectorOptions.ALL_LANDMARKS)
-            .setClassificationMode(FirebaseVisionFaceDetectorOptions.ALL_CLASSIFICATIONS)
+            .setPerformanceMode(FirebaseVisionFaceDetectorOptions.ALL_CONTOURS)
             .build()
     }
 
@@ -47,60 +51,11 @@ class CameraDetectionFragment :
 
     private var cameraManager: CameraManager? = null
     private var cameraDevice: CameraDevice? = null
+    private var detectFacesTask: Task<List<FirebaseVisionFace>>? = null
+    private var imageReader: ImageReader? = null
 
     private var cameraCaptureSessionCallback = object : CameraCaptureSession.CaptureCallback() {
-        override fun onCaptureBufferLost(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            target: Surface,
-            frameNumber: Long
-        ) {
-            super.onCaptureBufferLost(session, request, target, frameNumber)
-            showMessage("onCaptureBufferLost")
-        }
 
-        override fun onCaptureCompleted(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            result: TotalCaptureResult
-        ) {
-            super.onCaptureCompleted(session, request, result)
-            showMessage("onCaptureCompleted")
-        }
-
-        override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
-            super.onCaptureFailed(session, request, failure)
-            showMessage("onCaptureFailed")
-        }
-
-        override fun onCaptureProgressed(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            partialResult: CaptureResult
-        ) {
-            super.onCaptureProgressed(session, request, partialResult)
-            showMessage("onCaptureProgressed")
-        }
-
-        override fun onCaptureSequenceAborted(session: CameraCaptureSession, sequenceId: Int) {
-            super.onCaptureSequenceAborted(session, sequenceId)
-            showMessage("onCaptureSequenceAborted")
-        }
-
-        override fun onCaptureSequenceCompleted(session: CameraCaptureSession, sequenceId: Int, frameNumber: Long) {
-            super.onCaptureSequenceCompleted(session, sequenceId, frameNumber)
-            showMessage("onCaptureSequenceAborted")
-        }
-
-        override fun onCaptureStarted(
-            session: CameraCaptureSession,
-            request: CaptureRequest,
-            timestamp: Long,
-            frameNumber: Long
-        ) {
-            super.onCaptureStarted(session, request, timestamp, frameNumber)
-            showMessage("onCaptureStarted")
-        }
     }
 
     private var cameraStateCallback = object : CameraDevice.StateCallback() {
@@ -114,6 +69,8 @@ class CameraDetectionFragment :
 
         override fun onOpened(camera: CameraDevice) {
             showMessage("Camera opened.")
+            imageReader = ImageReader.newInstance(svCamera.width, svCamera.height, ImageFormat.YUV_420_888, 2)
+            imageReader?.setOnImageAvailableListener(this@CameraDetectionFragment, Handler())
             cameraDevice = camera
             configureCamera()
         }
@@ -122,7 +79,8 @@ class CameraDetectionFragment :
     private var sessionCallback: CameraCaptureSession.StateCallback = object : CameraCaptureSession.StateCallback() {
         override fun onConfigured(session: CameraCaptureSession) {
             val cameraDevice = cameraDevice ?: return
-            val surface = svCamera.holder.surface
+            val imageReader = imageReader ?: return
+            val surface = imageReader.surface
             val requestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             requestBuilder.addTarget(surface)
             val request = requestBuilder.build()
@@ -138,12 +96,6 @@ class CameraDetectionFragment :
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         runCamera()
-        svCamera.holder.addCallback(this)
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        svCamera.holder.removeCallback(this)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -173,13 +125,27 @@ class CameraDetectionFragment :
 
     }
 
-    override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {
-    }
-
-    override fun surfaceDestroyed(holder: SurfaceHolder?) {
-    }
-
-    override fun surfaceCreated(holder: SurfaceHolder?) {
+    override fun onImageAvailable(p0: ImageReader?) {
+        p0?.acquireNextImage()?.use { image ->
+            val lastTask = detectFacesTask
+            if (lastTask == null || lastTask.isCanceled || lastTask.isCanceled || lastTask.isSuccessful) {
+                val firebaseFace = FirebaseVisionImage.fromMediaImage(
+                    image,
+                    FirebaseVisionImageMetadata.ROTATION_270
+                )
+                svCamera.holder.lockCanvas().apply {
+                    drawBitmap(firebaseFace.bitmapForDebugging, 0f, 0f, Paint())
+                    svCamera.holder.unlockCanvasAndPost(this)
+                }
+                detectFacesTask = cameraDetector.detectInImage(firebaseFace)
+                    .addOnSuccessListener {
+                        svCamera.holder.lockCanvas().apply {
+                            drawBitmap(firebaseFace.bitmapForDebugging, 0f, 0f, Paint())
+                            svCamera.holder.unlockCanvasAndPost(this)
+                        }
+                    }
+            }
+        }
     }
 
     private fun runCamera() {
@@ -203,7 +169,8 @@ class CameraDetectionFragment :
 
     private fun configureCamera() {
         val cameraDevice = cameraDevice ?: return
-        val surface = svCamera.holder.surface
+        val imageReader = imageReader ?: return
+        val surface = imageReader.surface
         try {
             cameraDevice.createCaptureSession(listOf(surface), sessionCallback, Handler())
         } catch (e: CameraAccessException) {
