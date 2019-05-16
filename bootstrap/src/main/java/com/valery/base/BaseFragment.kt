@@ -6,12 +6,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
 import com.valery.base.message.MessageView
 import com.valery.base.utils.extensions.cast
 
-abstract class BaseFragment<T : BaseViewModel>(private val clazz: Class<T>) : Fragment(), MessageView {
-    lateinit var viewModel: T
+abstract class BaseFragment<VM : BaseViewModel>(private val clazz: Class<VM>) : Fragment(), MessageView {
+
+    lateinit var viewModel: VM
 
     abstract val layoutId: Int
 
@@ -33,6 +36,17 @@ abstract class BaseFragment<T : BaseViewModel>(private val clazz: Class<T>) : Fr
         super.onCreate(savedInstanceState)
         initViewModel()
     }
+
+    override fun onPause() {
+        onReleaseObservers()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        onPrepareObservers()
+    }
+
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(layoutId, container, false)
@@ -63,5 +77,17 @@ abstract class BaseFragment<T : BaseViewModel>(private val clazz: Class<T>) : Fr
 
     override fun showSnackbar(id: Int, view: View, length: Int) {
         messageView?.showSnackbar(id, view, length)
+    }
+
+    open fun onPrepareObservers() {
+
+    }
+
+    open fun onReleaseObservers() {
+
+    }
+
+    protected fun <T> LiveData<T>.observe(observer: Observer<T>) {
+        observe(this@BaseFragment, observer)
     }
 }

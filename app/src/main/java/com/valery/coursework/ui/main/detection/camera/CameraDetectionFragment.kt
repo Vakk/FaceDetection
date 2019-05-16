@@ -2,7 +2,6 @@ package com.valery.coursework.ui.main.detection.camera
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
@@ -17,13 +16,14 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Looper
 import android.provider.MediaStore
 import android.view.View
 import androidx.core.graphics.applyCanvas
+import androidx.lifecycle.Observer
 import com.google.android.gms.tasks.Task
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
-import com.google.firebase.ml.vision.common.FirebaseVisionImageMetadata
 import com.google.firebase.ml.vision.face.FirebaseVisionFace
 import com.google.firebase.ml.vision.face.FirebaseVisionFaceDetectorOptions
 import com.valery.base.BaseFragment
@@ -54,23 +54,23 @@ class CameraDetectionFragment :
     private var detectFacesTask: Task<List<FirebaseVisionFace>>? = null
     private var imageReader: ImageReader? = null
 
-    private var cameraCaptureSessionCallback = object : CameraCaptureSession.CaptureCallback() {
-
-    }
-
     private var cameraStateCallback = object : CameraDevice.StateCallback() {
         override fun onDisconnected(camera: CameraDevice) {
             showMessage("Camera disconnected.")
         }
 
         override fun onError(camera: CameraDevice, error: Int) {
-            showMessage("Camera error.")
+            showMessage("Camera error. $error")
+            runCamera()
         }
 
         override fun onOpened(camera: CameraDevice) {
             showMessage("Camera opened.")
-            imageReader = ImageReader.newInstance(svCamera.width, svCamera.height, ImageFormat.YUV_420_888, 2)
-            imageReader?.setOnImageAvailableListener(this@CameraDetectionFragment, Handler())
+            imageReader = ImageReader.newInstance(480, 640, ImageFormat.JPEG, 1)
+            Thread {
+                Looper.prepare()
+                imageReader?.setOnImageAvailableListener(this@CameraDetectionFragment, Handler(Looper.myLooper()))
+            }.run()
             cameraDevice = camera
             configureCamera()
         }
@@ -84,7 +84,7 @@ class CameraDetectionFragment :
             val requestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW)
             requestBuilder.addTarget(surface)
             val request = requestBuilder.build()
-            session.setRepeatingRequest(request, cameraCaptureSessionCallback, null)
+            session.setRepeatingRequest(request, null, null)
             showMessage("capture session configured: $session")
         }
 
@@ -96,6 +96,20 @@ class CameraDetectionFragment :
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         runCamera()
+    }
+
+    override fun onPrepareObservers() {
+        super.onPrepareObservers()
+        viewModel.onFrameChanged.observe(Observer {
+            it?.let { bitmap ->
+                val holder = svCamera.holder
+                synchronized(holder) {
+                    val canvas = holder.lockCanvas()
+                    canvas.drawBitmap(bitmap, 0f, 0f, Paint())
+                    holder.unlockCanvasAndPost(canvas)
+                }
+            }
+        })
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -112,40 +126,13 @@ class CameraDetectionFragment :
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        when (requestCode) {
-            RequestCode.PICK_IMAGE.code -> {
-                data?.data?.let { detectStaticImage(it) }
-            }
-            else -> super.onActivityResult(requestCode, resultCode, data)
-        }
-    }
-
     override fun onClick(v: View?) {
 
     }
 
     override fun onImageAvailable(p0: ImageReader?) {
-        p0?.acquireNextImage()?.use { image ->
-            val lastTask = detectFacesTask
-            if (lastTask == null || lastTask.isCanceled || lastTask.isCanceled || lastTask.isSuccessful) {
-                val firebaseFace = FirebaseVisionImage.fromMediaImage(
-                    image,
-                    FirebaseVisionImageMetadata.ROTATION_270
-                )
-                svCamera.holder.lockCanvas().apply {
-                    drawBitmap(firebaseFace.bitmapForDebugging, 0f, 0f, Paint())
-                    svCamera.holder.unlockCanvasAndPost(this)
-                }
-                detectFacesTask = cameraDetector.detectInImage(firebaseFace)
-                    .addOnSuccessListener {
-                        svCamera.holder.lockCanvas().apply {
-                            drawBitmap(firebaseFace.bitmapForDebugging, 0f, 0f, Paint())
-                            svCamera.holder.unlockCanvasAndPost(this)
-                        }
-                    }
-            }
-        }
+        val reader = p0 ?: return
+        viewModel.processImageReader(reader)
     }
 
     private fun runCamera() {
@@ -161,7 +148,9 @@ class CameraDetectionFragment :
         val cameraManager = cameraManager ?: return
         val cameraIdList = cameraManager.cameraIdList
         try {
-            cameraManager.openCamera(cameraIdList[1], cameraStateCallback, Handler())
+            Thread().run {
+                cameraManager.openCamera(cameraIdList[1], cameraStateCallback, Handler())
+            }
         } catch (e: SecurityException) {
             showMessage("Camera's permissions not allowed.")
         }
@@ -198,7 +187,6 @@ class CameraDetectionFragment :
                 }
             }
         }
-        TODO("Add some show to UI")
     }
 
 
