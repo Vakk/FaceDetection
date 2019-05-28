@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.valery.coursework.ui.coordinator.BaseFragmentCoordinator
 import com.valery.coursework.R
 import com.valery.coursework.ui.main.detection.camera.CameraDetectionFragment
+import com.valery.coursework.ui.main.detection.camera.CameraDetectionFragmentNew
 import com.valery.coursework.ui.main.detection.image.ImageDetectionFragment
 import com.valery.coursework.ui.main.menu.MenuFragment
 
@@ -20,7 +21,7 @@ class MainCoordinatorImpl : BaseFragmentCoordinator(), MainCoordinator {
     }
 
     override fun openImageDetection() {
-        replaceFragment(CameraDetectionFragment.newInstance())
+        replaceFragment(CameraDetectionFragmentNew.newInstance())
     }
 
 

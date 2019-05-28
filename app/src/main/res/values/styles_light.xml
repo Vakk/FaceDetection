@@ -4,6 +4,7 @@
     <style name="View" />
 
     <style name="View.1" parent="View">
+        <item name="android:clickable">true</item>
         <item name="android:background">@android:color/white</item>
     </style>
 </resources>

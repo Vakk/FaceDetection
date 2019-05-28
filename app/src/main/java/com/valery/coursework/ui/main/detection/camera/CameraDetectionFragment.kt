@@ -21,7 +21,6 @@ import android.provider.MediaStore
 import android.view.View
 import androidx.core.graphics.applyCanvas
 import androidx.lifecycle.Observer
-import com.google.android.gms.tasks.Task
 import com.google.firebase.ml.vision.FirebaseVision
 import com.google.firebase.ml.vision.common.FirebaseVisionImage
 import com.google.firebase.ml.vision.face.FirebaseVisionFace
@@ -51,7 +50,6 @@ class CameraDetectionFragment :
 
     private var cameraManager: CameraManager? = null
     private var cameraDevice: CameraDevice? = null
-    private var detectFacesTask: Task<List<FirebaseVisionFace>>? = null
     private var imageReader: ImageReader? = null
 
     private var cameraStateCallback = object : CameraDevice.StateCallback() {
@@ -68,7 +66,6 @@ class CameraDetectionFragment :
             showMessage("Camera opened.")
             imageReader = ImageReader.newInstance(480, 640, ImageFormat.JPEG, 1)
             Thread {
-                Looper.prepare()
                 imageReader?.setOnImageAvailableListener(this@CameraDetectionFragment, Handler(Looper.myLooper()))
             }.run()
             cameraDevice = camera
@@ -148,9 +145,7 @@ class CameraDetectionFragment :
         val cameraManager = cameraManager ?: return
         val cameraIdList = cameraManager.cameraIdList
         try {
-            Thread().run {
-                cameraManager.openCamera(cameraIdList[1], cameraStateCallback, Handler())
-            }
+            cameraManager.openCamera(cameraIdList[1], cameraStateCallback, Handler())
         } catch (e: SecurityException) {
             showMessage("Camera's permissions not allowed.")
         }
